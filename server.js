@@ -1,4 +1,6 @@
 const path = require("path");
+const fs = require("fs");
+const { createPrivateKey } = require("crypto");
 const express = require("express");
 const { google } = require("googleapis");
 
@@ -10,7 +12,7 @@ const port = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname)));
 
 function normalizePrivateKey(rawPrivateKey) {
-  let key = rawPrivateKey.trim();
+  let key = String(rawPrivateKey || "").trim();
 
   if (
     (key.startsWith('"') && key.endsWith('"')) ||
@@ -19,26 +21,86 @@ function normalizePrivateKey(rawPrivateKey) {
     key = key.slice(1, -1);
   }
 
-  // Support both "\\n" and "\n" formats used in .env files.
-  return key
-    .replace(/\\\\n/g, "\n")
+  // Support .env inputs that may contain escaped newlines and CRLF artifacts.
+  key = key
+    .replace(/\r/g, "")
+    .replace(/\\r\\n/g, "\n")
     .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "")
+    .replace(/\\\//g, "/")
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_match, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    )
+    .replace(/\\r/g, "\n")
     .trim();
+
+  const beginMarker = "-----BEGIN PRIVATE KEY-----";
+  const endMarker = "-----END PRIVATE KEY-----";
+  const beginIndex = key.indexOf(beginMarker);
+  const endIndex = key.indexOf(endMarker);
+
+  if (beginIndex !== -1 && endIndex !== -1 && endIndex > beginIndex) {
+    const bodyStart = beginIndex + beginMarker.length;
+    const rawBody = key.slice(bodyStart, endIndex);
+
+    const normalizedBody = rawBody
+      .replace(/[\s\n\r\t]+/g, "")
+      .replace(/\\/g, "")
+      .replace(/[^A-Za-z0-9+/=]/g, "");
+
+    const bodyLines = normalizedBody.match(/.{1,64}/g) || [];
+    key = `${beginMarker}\n${bodyLines.join("\n")}\n${endMarker}`;
+  } else {
+    key = key
+      .replace(/-----BEGIN PRIVATE KEY-----\s*/, "-----BEGIN PRIVATE KEY-----\n")
+      .replace(/\s*-----END PRIVATE KEY-----/, "\n-----END PRIVATE KEY-----")
+      .trim();
+  }
+
+  return `${key}\n`;
+}
+
+function assertPrivateKeyFormat(privateKey) {
+  try {
+    createPrivateKey({ key: privateKey, format: "pem" });
+  } catch (error) {
+    throw new Error(`Invalid GA4 private key format: ${error.message}`);
+  }
 }
 
 function parseServiceAccountFromEnv() {
+  const serviceAccountFile = process.env.GA4_SERVICE_ACCOUNT_FILE;
+  if (serviceAccountFile) {
+    const filePath = path.resolve(serviceAccountFile);
+    const serviceAccount = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = normalizePrivateKey(serviceAccount.private_key);
+      assertPrivateKeyFormat(serviceAccount.private_key);
+    }
+    return serviceAccount;
+  }
+
   const inlineJson = process.env.GA4_SERVICE_ACCOUNT_JSON;
   if (inlineJson) {
-    return JSON.parse(inlineJson);
+    const serviceAccount = JSON.parse(inlineJson);
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = normalizePrivateKey(serviceAccount.private_key);
+      assertPrivateKeyFormat(serviceAccount.private_key);
+    }
+    return serviceAccount;
   }
 
   const email = process.env.GA4_CLIENT_EMAIL;
-  const privateKey = process.env.GA4_PRIVATE_KEY;
+  const privateKeyFromBase64 = process.env.GA4_PRIVATE_KEY_BASE64
+    ? Buffer.from(process.env.GA4_PRIVATE_KEY_BASE64, "base64").toString("utf8")
+    : "";
+  const privateKey = process.env.GA4_PRIVATE_KEY || privateKeyFromBase64;
   if (email && privateKey) {
+    const normalizedPrivateKey = normalizePrivateKey(privateKey);
+    assertPrivateKeyFormat(normalizedPrivateKey);
+
     return {
       client_email: email,
-      private_key: normalizePrivateKey(privateKey),
+      private_key: normalizedPrivateKey,
     };
   }
 
