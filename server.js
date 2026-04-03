@@ -9,6 +9,24 @@ const port = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname)));
 
+function normalizePrivateKey(rawPrivateKey) {
+  let key = rawPrivateKey.trim();
+
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1);
+  }
+
+  // Support both "\\n" and "\n" formats used in .env files.
+  return key
+    .replace(/\\\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .trim();
+}
+
 function parseServiceAccountFromEnv() {
   const inlineJson = process.env.GA4_SERVICE_ACCOUNT_JSON;
   if (inlineJson) {
@@ -20,7 +38,7 @@ function parseServiceAccountFromEnv() {
   if (email && privateKey) {
     return {
       client_email: email,
-      private_key: privateKey.replace(/\\n/g, "\n"),
+      private_key: normalizePrivateKey(privateKey),
     };
   }
 
