@@ -23,9 +23,9 @@ npm ci --omit=dev
 
 echo "[4/5] Restarting PM2 app..."
 if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-  pm2 restart "$APP_NAME" --update-env
+  pm2 restart ecosystem.config.cjs --only "$APP_NAME" --env production --update-env
 else
-  pm2 start ecosystem.config.cjs --env production
+  pm2 start ecosystem.config.cjs --only "$APP_NAME" --env production
 fi
 
 echo "[5/5] Saving PM2 process list..."
