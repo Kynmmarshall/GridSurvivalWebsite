@@ -24,15 +24,39 @@ function initGA4() {
 function trackCTAEvents() {
   const trackedLinks = document.querySelectorAll("[data-ga-event]");
   trackedLinks.forEach((link) => {
-    link.addEventListener("click", () => {
+    link.addEventListener("click", (event) => {
       if (typeof window.gtag !== "function") {
         return;
+      }
+
+      const href = link.getAttribute("href") || "";
+      const isExternalUrl = /^https?:\/\//i.test(href);
+      const opensNewTab = (link.getAttribute("target") || "").toLowerCase() === "_blank";
+
+      let didNavigate = false;
+      const completeNavigation = () => {
+        if (didNavigate || !isExternalUrl || opensNewTab) {
+          return;
+        }
+        didNavigate = true;
+        window.location.href = href;
+      };
+
+      if (isExternalUrl && !opensNewTab) {
+        event.preventDefault();
+        setTimeout(completeNavigation, 1200);
       }
 
       window.gtag("event", link.dataset.gaEvent, {
         event_category: "engagement",
         event_label: link.dataset.gaLabel || link.textContent.trim(),
-        link_url: link.getAttribute("href") || "",
+        link_url: href,
+        transport_type: "beacon",
+        event_timeout: 1500,
+        event_callback: () => {
+          completeNavigation();
+          setTimeout(loadLiveAnalytics, 1500);
+        },
       });
     });
   });
@@ -68,6 +92,10 @@ let downloadsChart;
 function createDownloadsChart() {
   const canvas = document.getElementById("downloadsChart");
   if (!canvas) {
+    return;
+  }
+
+  if (typeof window.Chart !== "function") {
     return;
   }
 
@@ -141,18 +169,21 @@ async function loadLiveAnalytics() {
       headers: {
         Accept: "application/json",
       },
+      cache: "no-store",
     });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     const data = await response.json();
+    const liveUsers = Math.max(data.activeUsers || 0, data.realtimeActiveUsers || 0);
+    const liveDownloads = Math.max(data.totalDownloads || 0, data.realtimeDownloads || 0);
 
     if (totalPlayersEl) {
-      animateIntegerValue(totalPlayersEl, data.activeUsers || 0);
+      animateIntegerValue(totalPlayersEl, liveUsers);
     }
     if (downloadCountEl) {
-      animateIntegerValue(downloadCountEl, data.totalDownloads || 0);
+      animateIntegerValue(downloadCountEl, liveDownloads);
     }
     if (avgSessionEl) {
       avgSessionEl.textContent = formatDuration(data.avgSessionSeconds || 0);
@@ -171,8 +202,20 @@ async function loadLiveAnalytics() {
       status.textContent = "Live data from GA4";
     }
   } catch (_error) {
+    if (totalPlayersEl) {
+      totalPlayersEl.textContent = "0";
+    }
+    if (avgSessionEl) {
+      avgSessionEl.textContent = formatDuration(0);
+    }
+    if (downloadCountEl) {
+      downloadCountEl.textContent = "0";
+    }
+    if (retentionEl) {
+      retentionEl.textContent = formatPercent(0);
+    }
     if (status) {
-      status.textContent = "Showing cached sample stats. Configure /api/analytics to use live GA4 data.";
+      status.textContent = "Live analytics unavailable. Check /api/analytics response.";
     }
   }
 }
@@ -181,6 +224,7 @@ initGA4();
 trackCTAEvents();
 createDownloadsChart();
 loadLiveAnalytics();
+setInterval(loadLiveAnalytics, 30000);
 
 // Initialize footer year stamp
 const yearTarget = document.getElementById("year");

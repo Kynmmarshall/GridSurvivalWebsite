@@ -116,6 +116,15 @@ async function runGA4Report(propertyId, body, auth) {
   return result.data;
 }
 
+async function runGA4RealtimeReport(propertyId, body, auth) {
+  const analyticsData = google.analyticsdata({ version: "v1beta", auth });
+  const result = await analyticsData.properties.runRealtimeReport({
+    property: `properties/${propertyId}`,
+    requestBody: body,
+  });
+  return result.data;
+}
+
 app.get("/api/analytics", async (_req, res) => {
   try {
     const propertyId = process.env.GA4_PROPERTY_ID;
@@ -169,6 +178,49 @@ app.get("/api/analytics", async (_req, res) => {
       ),
     ]);
 
+    // Realtime reports are optional and used to reduce perceived delay in GA4 standard reports.
+    let realtimeActiveUsers = 0;
+    let realtimeDownloads = 0;
+
+    try {
+      const [realtimeOverview, realtimeDownloadEvents] = await Promise.all([
+        runGA4RealtimeReport(
+          propertyId,
+          {
+            metrics: [{ name: "activeUsers" }],
+          },
+          auth
+        ),
+        runGA4RealtimeReport(
+          propertyId,
+          {
+            dimensions: [{ name: "eventName" }],
+            metrics: [{ name: "eventCount" }],
+            dimensionFilter: {
+              filter: {
+                fieldName: "eventName",
+                stringFilter: {
+                  value: "download_click",
+                  matchType: "EXACT",
+                },
+              },
+            },
+            limit: 1,
+          },
+          auth
+        ),
+      ]);
+
+      realtimeActiveUsers = Number(
+        realtimeOverview.rows?.[0]?.metricValues?.[0]?.value || 0
+      );
+      realtimeDownloads = Number(
+        realtimeDownloadEvents.rows?.[0]?.metricValues?.[0]?.value || 0
+      );
+    } catch (_realtimeError) {
+      // Keep endpoint healthy even if realtime reporting is unavailable.
+    }
+
     const overviewRow = overview.rows?.[0]?.metricValues || [];
     const activeUsers = Number(overviewRow[0]?.value || 0);
     const avgSessionSeconds = Number(overviewRow[1]?.value || 0);
@@ -198,11 +250,21 @@ app.get("/api/analytics", async (_req, res) => {
       dailyDownloads.push(dayCount);
     });
 
+    const resolvedActiveUsers = Math.max(activeUsers, realtimeActiveUsers);
+    const resolvedTotalDownloads = Math.max(totalDownloads, realtimeDownloads);
+
+    if (dailyLabels.length === 0 && resolvedTotalDownloads > 0) {
+      dailyLabels.push("Now");
+      dailyDownloads.push(resolvedTotalDownloads);
+    }
+
     return res.json({
-      activeUsers,
+      activeUsers: resolvedActiveUsers,
       avgSessionSeconds,
       engagementRate,
-      totalDownloads,
+      totalDownloads: resolvedTotalDownloads,
+      realtimeActiveUsers,
+      realtimeDownloads,
       dailyLabels,
       dailyDownloads,
       refreshedAt: new Date().toISOString(),
