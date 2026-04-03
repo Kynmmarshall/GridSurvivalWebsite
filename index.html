@@ -9,7 +9,7 @@
 		<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
 		<link rel="stylesheet" href="style.css" />
 	</head>
-	<body>
+	<body data-ga4-id="G-QG44CM0R8X" data-analytics-endpoint="/api/analytics">
 		<div class="orb orb-left"></div>
 		<div class="orb orb-right"></div>
 		<header class="site-header" data-animate>
@@ -38,8 +38,8 @@
 						Grid Survival drops you onto a floating city of fragile tiles. Sprint across flashing platforms, dodge surprise hazards, and outlast rival squads in pulse-racing multiplayer showdowns. Grab the latest build, media kit, and community stats—all from this player-friendly launch center.
 					</p>
 					<div class="cta-row">
-						<a class="cta primary" href="#download">Play the Free Demo</a>
-						<a class="cta ghost" href="#download">Download Latest Build</a>
+						<a class="cta primary" href="#download" data-ga-event="play_demo_click" data-ga-label="hero_play_demo">Play the Free Demo</a>
+						<a class="cta ghost" href="#download" data-ga-event="download_section_open" data-ga-label="hero_download_latest">Download Latest Build</a>
 					</div>
 					<dl class="hero-stats">
 						<div data-animate data-delay="0.05">
@@ -82,7 +82,7 @@
                             <li>Has Player vs computer mode</li>
 							<li>Supports 2-player multiplayer mode</li>
 						</ul>
-						<a class="cta secondary" href="https://drive.google.com/file/d/1HuhE82mciH7GQRfVSruZ-iZTCpe7yifo/view?usp=sharing" download>Play on Windows</a>
+						<a class="cta secondary" href="https://drive.google.com/file/d/1HuhE82mciH7GQRfVSruZ-iZTCpe7yifo/view?usp=sharing" download data-ga-event="download_click" data-ga-label="windows_drive_link">Play on Windows</a>
 					</article>
 			
 				</div>
@@ -120,26 +120,27 @@
 				<div class="panel-heading">
 					<p class="eyebrow">Community Pulse</p>
 					<h3>See how the Grid is thriving</h3>
+					<p id="analyticsStatus">Live data syncing from Google Analytics...</p>
 				</div>
 				<div class="analytics-grid">
 					<div class="metric" data-animate>
 						<p>Total Players</p>
-						<strong id="downloadCount">148,902</strong>
+						<strong id="totalPlayers">148,902</strong>
 						<span>since global reveal</span>
 					</div>
 					<div class="metric" data-animate data-delay="0.1">
 						<p>Avg Session</p>
-						<strong>18m</strong>
+						<strong id="avgSession">18m</strong>
 						<span>players can’t put it down</span>
 					</div>
 					<div class="metric" data-animate data-delay="0.2">
 						<p>Downloads</p>
-						<strong>72,430</strong>
+						<strong id="downloadCount">72,430</strong>
 						<span>from this hub</span>
 					</div>
 					<div class="metric" data-animate data-delay="0.3">
 						<p>Retention</p>
-						<strong>63%</strong>
+						<strong id="retentionRate">63%</strong>
 						<span>week-one loyalty</span>
 					</div>
 				</div>

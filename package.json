@@ -1,0 +1,15 @@
+{
+  "name": "grid-survival-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Grid Survival launch site with GA4 analytics proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0"
+  }
+}

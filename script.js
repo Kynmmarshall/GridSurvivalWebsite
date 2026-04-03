@@ -1,34 +1,81 @@
-// Initialize footer year stamp
-const yearTarget = document.getElementById("year");
-if (yearTarget) {
-  yearTarget.textContent = new Date().getFullYear();
+// GA4 setup: replace data-ga4-id in index.html with your real Measurement ID (G-XXXXXXX)
+function initGA4() {
+  const measurementId = document.body?.dataset?.ga4Id;
+  if (!measurementId || measurementId === "G-XXXXXXXXXX") {
+    return;
+  }
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function gtag() {
+    window.dataLayer.push(arguments);
+  };
+
+  window.gtag("js", new Date());
+  window.gtag("config", measurementId, {
+    anonymize_ip: true,
+  });
+
+  const gaScript = document.createElement("script");
+  gaScript.async = true;
+  gaScript.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  document.head.appendChild(gaScript);
 }
 
-// Animate total download counter for subtle motion
-const downloadTarget = document.getElementById("downloadCount");
-if (downloadTarget) {
-  const finalValue = parseInt(downloadTarget.textContent.replace(/,/g, ""), 10);
-  let current = Math.max(0, finalValue - 1200);
+function trackCTAEvents() {
+  const trackedLinks = document.querySelectorAll("[data-ga-event]");
+  trackedLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      if (typeof window.gtag !== "function") {
+        return;
+      }
+
+      window.gtag("event", link.dataset.gaEvent, {
+        event_category: "engagement",
+        event_label: link.dataset.gaLabel || link.textContent.trim(),
+        link_url: link.getAttribute("href") || "",
+      });
+    });
+  });
+}
+
+function animateIntegerValue(target, endValue) {
+  const safeEnd = Number.isFinite(endValue) ? Math.max(0, Math.round(endValue)) : 0;
+  let current = 0;
   const tick = () => {
-    current += Math.ceil((finalValue - current) * 0.08);
-    if (current >= finalValue) {
-      downloadTarget.textContent = finalValue.toLocaleString();
+    current += Math.ceil((safeEnd - current) * 0.1);
+    if (current >= safeEnd) {
+      target.textContent = safeEnd.toLocaleString();
       return;
     }
-    downloadTarget.textContent = current.toLocaleString();
+    target.textContent = current.toLocaleString();
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
 
-// Build the downloads chart using Chart.js
-const ctx = document.getElementById("downloadsChart");
-if (ctx) {
-  const gradient = ctx.getContext("2d").createLinearGradient(0, 0, 0, 320);
+function formatDuration(seconds) {
+  const mins = Math.max(0, Math.round(seconds / 60));
+  return `${mins}m`;
+}
+
+function formatPercent(ratio) {
+  const pct = Math.max(0, ratio * 100);
+  return `${pct.toFixed(1)}%`;
+}
+
+let downloadsChart;
+
+function createDownloadsChart() {
+  const canvas = document.getElementById("downloadsChart");
+  if (!canvas) {
+    return;
+  }
+
+  const gradient = canvas.getContext("2d").createLinearGradient(0, 0, 0, 320);
   gradient.addColorStop(0, "rgba(109, 240, 255, 0.4)");
   gradient.addColorStop(1, "rgba(109, 240, 255, 0)");
 
-  new Chart(ctx, {
+  downloadsChart = new Chart(canvas, {
     type: "line",
     data: {
       labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
@@ -79,6 +126,66 @@ if (ctx) {
       },
     },
   });
+}
+
+async function loadLiveAnalytics() {
+  const endpoint = document.body?.dataset?.analyticsEndpoint || "/api/analytics";
+  const status = document.getElementById("analyticsStatus");
+  const totalPlayersEl = document.getElementById("totalPlayers");
+  const avgSessionEl = document.getElementById("avgSession");
+  const downloadCountEl = document.getElementById("downloadCount");
+  const retentionEl = document.getElementById("retentionRate");
+
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (totalPlayersEl) {
+      animateIntegerValue(totalPlayersEl, data.activeUsers || 0);
+    }
+    if (downloadCountEl) {
+      animateIntegerValue(downloadCountEl, data.totalDownloads || 0);
+    }
+    if (avgSessionEl) {
+      avgSessionEl.textContent = formatDuration(data.avgSessionSeconds || 0);
+    }
+    if (retentionEl) {
+      retentionEl.textContent = formatPercent(data.engagementRate || 0);
+    }
+
+    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(data.dailyDownloads)) {
+      downloadsChart.data.labels = data.dailyLabels;
+      downloadsChart.data.datasets[0].data = data.dailyDownloads;
+      downloadsChart.update();
+    }
+
+    if (status) {
+      status.textContent = "Live data from GA4";
+    }
+  } catch (_error) {
+    if (status) {
+      status.textContent = "Showing cached sample stats. Configure /api/analytics to use live GA4 data.";
+    }
+  }
+}
+
+initGA4();
+trackCTAEvents();
+createDownloadsChart();
+loadLiveAnalytics();
+
+// Initialize footer year stamp
+const yearTarget = document.getElementById("year");
+if (yearTarget) {
+  yearTarget.textContent = new Date().getFullYear();
 }
 
 // Ensure gallery slots only pull images from the assets folder
