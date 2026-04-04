@@ -21,6 +21,24 @@ app.use((req, res, next) => {
   return next();
 });
 
+// Serve static files with cache-busting headers for HTML, CSS, JS
+app.use((req, res, next) => {
+  // Only target static assets
+  if (req.method === "GET" && /\.(html|css|js)$/i.test(req.url)) {
+    // HTML: never cache
+    if (/\.html$/i.test(req.url)) {
+      res.setHeader("Cache-Control", "no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    } else {
+      // CSS/JS: short cache, force revalidate
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname)));
 
 function readAnalyticsCache() {
