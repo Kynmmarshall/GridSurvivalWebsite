@@ -88,6 +88,46 @@ function formatPercent(ratio) {
 }
 
 let downloadsChart;
+const ANALYTICS_REFRESH_MS = 30000;
+
+function buildAnalyticsEndpointCandidates() {
+  const configured = (document.body?.dataset?.analyticsEndpoint || "").trim();
+  const candidates = [configured, "/api/analytics", `${window.location.origin}/api/analytics`];
+
+  if (window.location.hostname && window.location.port !== "6060") {
+    const scheme = window.location.protocol === "http:" ? "http:" : "https:";
+    candidates.push(`${scheme}//${window.location.hostname}:6060/api/analytics`);
+  }
+
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+async function fetchAnalyticsPayload() {
+  const endpoints = buildAnalyticsEndpointCandidates();
+  let lastError = new Error("No analytics endpoint configured");
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} from ${endpoint}`);
+      }
+
+      const data = await response.json();
+      return { data, endpoint };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
 
 function createDownloadsChart() {
   const canvas = document.getElementById("downloadsChart");
@@ -157,7 +197,6 @@ function createDownloadsChart() {
 }
 
 async function loadLiveAnalytics() {
-  const endpoint = document.body?.dataset?.analyticsEndpoint || "/api/analytics";
   const status = document.getElementById("analyticsStatus");
   const totalPlayersEl = document.getElementById("totalPlayers");
   const avgSessionEl = document.getElementById("avgSession");
@@ -165,17 +204,7 @@ async function loadLiveAnalytics() {
   const retentionEl = document.getElementById("retentionRate");
 
   try {
-    const response = await fetch(endpoint, {
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
+    const { data } = await fetchAnalyticsPayload();
     const liveUsers = Math.max(data.activeUsers || 0, data.realtimeActiveUsers || 0);
     const liveDownloads = Math.max(data.totalDownloads || 0, data.realtimeDownloads || 0);
 
@@ -201,7 +230,7 @@ async function loadLiveAnalytics() {
     if (status) {
       status.textContent = "Live data from GA4";
     }
-  } catch (_error) {
+  } catch (error) {
     if (totalPlayersEl) {
       totalPlayersEl.textContent = "--";
     }
@@ -220,7 +249,8 @@ async function loadLiveAnalytics() {
       downloadsChart.update();
     }
     if (status) {
-      status.textContent = "Live analytics unavailable. Check /api/analytics response.";
+      const reason = String(error?.message || "unknown error").slice(0, 120);
+      status.textContent = `Live analytics unavailable (${reason}).`;
     }
   }
 }
@@ -229,7 +259,7 @@ initGA4();
 trackCTAEvents();
 createDownloadsChart();
 loadLiveAnalytics();
-setInterval(loadLiveAnalytics, 30000);
+setInterval(loadLiveAnalytics, ANALYTICS_REFRESH_MS);
 
 // Initialize footer year stamp
 const yearTarget = document.getElementById("year");
