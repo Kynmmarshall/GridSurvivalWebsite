@@ -228,7 +228,9 @@ async function loadLiveAnalytics() {
     }
 
     if (status) {
-      status.textContent = "Live data from GA4";
+      status.textContent = data.stale
+        ? "Showing last saved analytics (GA4 temporarily unavailable)"
+        : "Live data from GA4";
     }
   } catch (error) {
     if (totalPlayersEl) {

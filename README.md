@@ -17,6 +17,8 @@ Copy `.env.example` values into your VPS environment (or your process manager co
 - `GA4_PROPERTY_ID`
 - `GA4_CLIENT_EMAIL` + `GA4_PRIVATE_KEY`
 - or `GA4_SERVICE_ACCOUNT_JSON`
+- optional: `GA4_DOWNLOADS_START_DATE` (default: `2024-01-01`) for all-time download totals
+- optional: `ANALYTICS_CACHE_FILE` (default: `.runtime/analytics-cache.json`) to persist last-known analytics across restarts
 
 Important: The service account must have **Viewer/Analyst** access to your GA4 property.
 
@@ -44,4 +46,5 @@ npm start
 ## Notes
 
 - The front-end never exposes GA4 private credentials.
-- If `/api/analytics` is unavailable, the page falls back to sample numbers.
+- If `/api/analytics` is temporarily unavailable, the API serves the last saved analytics snapshot instead of zero values.
+- Keep your `.env` file outside git and do not delete the analytics cache file during deploy scripts.

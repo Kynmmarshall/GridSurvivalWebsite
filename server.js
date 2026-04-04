@@ -8,6 +8,8 @@ require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const downloadsStartDate = process.env.GA4_DOWNLOADS_START_DATE || "2024-01-01";
+const analyticsCacheFile = process.env.ANALYTICS_CACHE_FILE || path.join(__dirname, ".runtime", "analytics-cache.json");
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -20,6 +22,32 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(__dirname)));
+
+function readAnalyticsCache() {
+  try {
+    if (!fs.existsSync(analyticsCacheFile)) {
+      return null;
+    }
+    const raw = fs.readFileSync(analyticsCacheFile, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    return parsed;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function writeAnalyticsCache(payload) {
+  try {
+    const dir = path.dirname(analyticsCacheFile);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(analyticsCacheFile, JSON.stringify(payload, null, 2), "utf8");
+  } catch (_error) {
+    // Ignore cache write failures to keep endpoint healthy.
+  }
+}
 
 function normalizePrivateKey(rawPrivateKey) {
   let key = String(rawPrivateKey || "").trim();
@@ -156,7 +184,7 @@ app.get("/api/analytics", async (_req, res) => {
       scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
     });
 
-    const [overview, downloadsByDay] = await Promise.all([
+    const [overview, downloadsByDay, downloadsTotal] = await Promise.all([
       runGA4Report(
         propertyId,
         {
@@ -185,6 +213,23 @@ app.get("/api/analytics", async (_req, res) => {
             },
           },
           orderBys: [{ dimension: { dimensionName: "date" } }],
+        },
+        auth
+      ),
+      runGA4Report(
+        propertyId,
+        {
+          dateRanges: [{ startDate: downloadsStartDate, endDate: "today" }],
+          metrics: [{ name: "eventCount" }],
+          dimensionFilter: {
+            filter: {
+              fieldName: "eventName",
+              stringFilter: {
+                value: "download_click",
+                matchType: "EXACT",
+              },
+            },
+          },
         },
         auth
       ),
@@ -240,12 +285,10 @@ app.get("/api/analytics", async (_req, res) => {
 
     const dailyLabels = [];
     const dailyDownloads = [];
-    let totalDownloads = 0;
 
     (downloadsByDay.rows || []).forEach((row) => {
       const yyyymmdd = row.dimensionValues?.[0]?.value || "";
       const dayCount = Number(row.metricValues?.[0]?.value || 0);
-      totalDownloads += dayCount;
 
       if (yyyymmdd.length === 8) {
         const year = yyyymmdd.slice(0, 4);
@@ -262,6 +305,10 @@ app.get("/api/analytics", async (_req, res) => {
       dailyDownloads.push(dayCount);
     });
 
+    const totalDownloads = Number(
+      downloadsTotal.rows?.[0]?.metricValues?.[0]?.value || 0
+    );
+
     const resolvedActiveUsers = Math.max(activeUsers, realtimeActiveUsers);
     const resolvedTotalDownloads = Math.max(totalDownloads, realtimeDownloads);
 
@@ -270,7 +317,7 @@ app.get("/api/analytics", async (_req, res) => {
       dailyDownloads.push(resolvedTotalDownloads);
     }
 
-    return res.json({
+    const payload = {
       activeUsers: resolvedActiveUsers,
       avgSessionSeconds,
       engagementRate,
@@ -280,8 +327,21 @@ app.get("/api/analytics", async (_req, res) => {
       dailyLabels,
       dailyDownloads,
       refreshedAt: new Date().toISOString(),
-    });
+      stale: false,
+    };
+
+    writeAnalyticsCache(payload);
+    return res.json(payload);
   } catch (error) {
+    const cached = readAnalyticsCache();
+    if (cached) {
+      return res.json({
+        ...cached,
+        stale: true,
+        staleReason: "Serving cached analytics while GA4 is unavailable",
+      });
+    }
+
     return res.status(500).json({
       error: "Unable to load GA4 analytics",
       details: error.message,
