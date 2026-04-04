@@ -106,11 +106,11 @@ function createDownloadsChart() {
   downloadsChart = new Chart(canvas, {
     type: "line",
     data: {
-      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      labels: [],
       datasets: [
         {
           label: "Downloads per day",
-          data: [18120, 19340, 20410, 21110, 22800, 24780, 26420],
+          data: [],
           fill: true,
           backgroundColor: gradient,
           borderColor: "#6df0ff",
@@ -145,7 +145,7 @@ function createDownloadsChart() {
         y: {
           ticks: {
             color: "#7c8aa4",
-            callback: (value) => `${value / 1000}k`,
+            callback: (value) => Number(value).toLocaleString(),
           },
           grid: {
             color: "rgba(255, 255, 255, 0.05)",
@@ -203,16 +203,21 @@ async function loadLiveAnalytics() {
     }
   } catch (_error) {
     if (totalPlayersEl) {
-      totalPlayersEl.textContent = "0";
+      totalPlayersEl.textContent = "--";
     }
     if (avgSessionEl) {
-      avgSessionEl.textContent = formatDuration(0);
+      avgSessionEl.textContent = "--";
     }
     if (downloadCountEl) {
-      downloadCountEl.textContent = "0";
+      downloadCountEl.textContent = "--";
     }
     if (retentionEl) {
-      retentionEl.textContent = formatPercent(0);
+      retentionEl.textContent = "--";
+    }
+    if (downloadsChart) {
+      downloadsChart.data.labels = [];
+      downloadsChart.data.datasets[0].data = [];
+      downloadsChart.update();
     }
     if (status) {
       status.textContent = "Live analytics unavailable. Check /api/analytics response.";
