@@ -299,10 +299,52 @@ main {
   animation: pulseGlow 3.5s ease-in-out infinite;
 }
 
+
 .cta.secondary {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   width: 100%;
+}
+
+/* Windows CTA custom style */
+.windows-cta {
+  background: linear-gradient(90deg, #00ADEF 0%, #6df0ff 100%);
+  color: #01040c;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 32px rgba(0,173,239,0.18), 0 2px 8px rgba(0,0,0,0.12);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  padding: 1.1rem 2.2rem;
+  border-radius: 1.5em;
+  width: 100%;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.windows-cta:hover, .windows-cta:focus {
+  background: linear-gradient(90deg, #6df0ff 0%, #00ADEF 100%);
+  color: #01040c;
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 16px 48px rgba(0,173,239,0.22), 0 4px 16px rgba(0,0,0,0.16);
+  text-decoration: none;
+}
+.windows-cta:active {
+  transform: scale(0.98);
+}
+.windows-cta .windows-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.5em;
+}
+.windows-cta .windows-label {
+  display: inline-block;
+  font-family: "Audiowide", "Space Grotesk", sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .cta.ghost {
@@ -461,17 +503,30 @@ main {
   padding: 1rem;
 }
 
+
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
 
+/* 3x2 gallery grid with larger slots */
+.gallery-grid-3x2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .gallery-slot {
   position: relative;
   border: 1px dashed rgba(255, 255, 255, 0.3);
-  border-radius: 1rem;
-  min-height: 180px;
+  border-radius: 1.2rem;
+  min-height: 200px;
+  min-width: 0;
+  aspect-ratio: 16/9;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -482,6 +537,7 @@ main {
   overflow: hidden;
   isolation: isolate;
   transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
 }
 
 .gallery-slot::after {

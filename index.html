@@ -25,7 +25,7 @@
 				<a href="#download">Download</a>
 				<a href="#analytics">Analytics</a>
 				<a href="#gallery">Gallery</a>
-				<a href="#deploy">Deploy</a>
+				<a href="#deploy">Contact us</a>
 			</nav>
 		</header>
 
@@ -46,13 +46,9 @@
 							<dt>Total Players</dt>
 							<dd id="totalPlayers">--</dd>
 						</div>
-						<div data-animate data-delay="0.1">
-							<dt>Tiles Fallen</dt>
-							<dd>1.2M</dd>
-						</div>
 						<div data-animate data-delay="0.15">
-							<dt>Cities Online</dt>
-							<dd>18</dd>
+							<dt>Top City</dt>
+							<dd>Yaounde</dd>
 						</div>
 					</dl>
 				</div>
@@ -76,13 +72,13 @@
 				<div class="download-grid">
 					<article class="download-card" data-animate>
 						<h4>Windows</h4>
-						<p>Optimized for keyboard, mouse, and your favorite controller. Plug in, party up, and start dodging tiles instantly.</p>
-						<ul>
-							<li>One-click installer</li>
-                            <li>Has Player vs computer mode</li>
-							<li>Supports 2-player multiplayer mode</li>
-						</ul>
-						<a class="cta secondary" href="https://drive.google.com/file/d/1HuhE82mciH7GQRfVSruZ-iZTCpe7yifo/view?usp=sharing" target="_blank" rel="noopener noreferrer" download data-ga-event="download_click" data-ga-label="windows_drive_link">Play on Windows</a>
+						<p>Optimized for keyboard and mouse. Plug in, party up, and start dodging tiles instantly.</p>
+						<a class="cta windows-cta" href="https://drive.google.com/file/d/1HuhE82mciH7GQRfVSruZ-iZTCpe7yifo/view?usp=sharing" target="_blank" rel="noopener noreferrer" download data-ga-event="download_click" data-ga-label="windows_drive_link">
+							<span class="windows-icon" aria-hidden="true">
+								<img src="assets/windows.png" alt="Windows logo" width="28" height="28" style="vertical-align:middle; display:inline-block;" />
+							</span>
+							<span class="windows-label">Play on Windows</span>
+						</a>
 					</article>
 			
 				</div>
@@ -96,24 +92,6 @@
 						<p>We drop new arenas, cosmetics, and hazards every few weeks. Come back anytime for the latest wave.</p>
 					</div>
 				</div>
-			</section>
-
-			<section class="panel grid" aria-label="Game beats" data-animate>
-				<article data-animate>
-					<p class="eyebrow">Adaptive Arena</p>
-					<h3>Tiles that fight back</h3>
-					<p>Glowing warnings, sudden gaps, and chain reactions keep every match unpredictable and force daring escapes.</p>
-				</article>
-				<article data-animate data-delay="0.1">
-					<p class="eyebrow">Hazard Mayhem</p>
-					<h3>Bullets, drones, surprise traps</h3>
-					<p>Slide past roaming lasers, leap over drones, and trick AI rivals into falling straight into the void.</p>
-				</article>
-				<article data-animate data-delay="0.2">
-					<p class="eyebrow">Squad Energy</p>
-					<h3>Play your way</h3>
-					<p>Jump in solo, rally a couch crew, fight clever AI, or host private LAN battles—every mode comes ready out of the box.</p>
-				</article>
 			</section>
 
 			<section id="analytics" class="panel analytics" data-animate>
@@ -154,29 +132,14 @@
 					<p class="eyebrow">Media Vault</p>
 					<h3>Show falling tiles and frantic jumps</h3>
 					</div>
-				<div class="gallery-grid">
-					<div class="gallery-slot" data-image="menu.png" aria-label="Hazard sprint screenshot" data-animate>
-					</div>
-					<div class="gallery-slot" data-image="game mode.png" aria-label="Drone dodge screenshot" data-animate data-delay="0.05">	
-					</div>
-					<div class="gallery-slot" data-image="character select.png" aria-label="Neon lanes screenshot" data-animate data-delay="0.1">
-					</div>
-					<div class="gallery-slot" data-image="1.png" aria-label="Squad LAN screenshot" data-animate data-delay="0.15">
-					</div>
-					<div class="gallery-slot" data-image="2.png" aria-label="Ranked climb screenshot" data-animate data-delay="0.2">
-					</div>
-					<div class="gallery-slot" data-image="4.png" aria-label="Cinematic fall screenshot" data-animate data-delay="0.25">
-					</div>
-                    <div class="gallery-slot" data-image="5.png" aria-label="Cinematic fall screenshot">
-					</div>
-					<div class="gallery-slot" data-image="6.png" aria-label="Cinematic fall screenshot" data-animate data-delay="0.3">
-					</div>
-					<div class="gallery-slot" data-image="gameover.png" aria-label="Cinematic fall screenshot" data-animate data-delay="0.35">
-					</div>
-					<div class="gallery-slot" data-image="gameover.png" aria-label="Cinematic fall screenshot" data-animate data-delay="0.4">
-					</div>
-
-				</div>
+				   <div class="gallery-grid gallery-grid-3x2">
+					   <div class="gallery-slot" data-image="menu.png" aria-label="Hazard sprint screenshot" data-animate></div>
+					   <div class="gallery-slot" data-image="game mode.png" aria-label="Drone dodge screenshot" data-animate data-delay="0.05"></div>
+					   <div class="gallery-slot" data-image="character select.png" aria-label="Neon lanes screenshot" data-animate data-delay="0.1"></div>
+					   <div class="gallery-slot" data-image="1.png" aria-label="Squad LAN screenshot" data-animate data-delay="0.15"></div>
+					   <div class="gallery-slot" data-image="2.png" aria-label="Ranked climb screenshot" data-animate data-delay="0.2"></div>
+					   <div class="gallery-slot" data-image="4.png" aria-label="Cinematic fall screenshot" data-animate data-delay="0.25"></div>
+				   </div>
             </section>
 
 			<section id="deploy" class="panel deploy" data-animate>
@@ -189,14 +152,14 @@
 						<ol>
 							<li>Download the latest Grid Survival build and install in seconds.</li>
 							<li>Invite your crew, set up a LAN or online lobby, and pick your mode.</li>
-							<li>Share your highlights with #GridSurvival and climb the seasonal leaderboards.</li>
+							<li>Share your highlights with <a href=" https://web.facebook.com/share/g/1GU5e446CL/" target="_blank">#GridSurvival</a> and climb the seasonal leaderboards.</li>
 						</ol>
 					</div>
 					<div class="contact-card" data-animate data-delay="0.15">
 						<p class="eyebrow">Need a squad?</p>
 						<h4>Contact us!</h4>
-						<p>Email: kynmmarshall@gmail.com</p>
-						<p>Facebook: https://web.facebook.com/share/g/1GU5e446CL/</p>
+						<p><a href="mailto:kynmmarshall@gmail.com">Contact Us!</a></p>
+						<p ><a href=" https://web.facebook.com/share/g/1GU5e446CL/">Join Facebook Group</a></p>
 					</div>
 				</div>
 			</section>
