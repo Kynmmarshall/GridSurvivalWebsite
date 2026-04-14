@@ -138,6 +138,58 @@ function assertPrivateKeyFormat(privateKey) {
   }
 }
 
+function readPrivateKeyFromDotenvFile() {
+  try {
+    const envPath = path.join(__dirname, ".env");
+    if (!fs.existsSync(envPath)) {
+      return "";
+    }
+
+    const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+    const keyStart = lines.findIndex((line) => line.startsWith("GA4_PRIVATE_KEY="));
+    if (keyStart === -1) {
+      return "";
+    }
+
+    const firstLineValue = lines[keyStart]
+      .slice("GA4_PRIVATE_KEY=".length)
+      .trim();
+    if (!firstLineValue) {
+      return "";
+    }
+
+    if (firstLineValue.includes("-----END PRIVATE KEY-----")) {
+      return firstLineValue;
+    }
+
+    const collected = [firstLineValue];
+    for (let i = keyStart + 1; i < lines.length; i += 1) {
+      const currentLine = lines[i];
+      const trimmed = currentLine.trim();
+
+      if (!trimmed) {
+        continue;
+      }
+
+      if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(trimmed)) {
+        break;
+      }
+
+      collected.push(trimmed);
+      if (trimmed.includes("-----END PRIVATE KEY-----")) {
+        break;
+      }
+    }
+
+    const reconstructed = collected.join("\n");
+    return reconstructed.includes("-----END PRIVATE KEY-----")
+      ? reconstructed
+      : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
 function parseServiceAccountFromEnv() {
   const serviceAccountFile = process.env.GA4_SERVICE_ACCOUNT_FILE;
   if (serviceAccountFile) {
@@ -164,7 +216,16 @@ function parseServiceAccountFromEnv() {
   const privateKeyFromBase64 = process.env.GA4_PRIVATE_KEY_BASE64
     ? Buffer.from(process.env.GA4_PRIVATE_KEY_BASE64, "base64").toString("utf8")
     : "";
-  const privateKey = process.env.GA4_PRIVATE_KEY || privateKeyFromBase64;
+  let privateKey = process.env.GA4_PRIVATE_KEY || privateKeyFromBase64;
+
+  // Support raw multiline GA4_PRIVATE_KEY blocks in .env files.
+  if (email && (!privateKey || !privateKey.includes("-----END PRIVATE KEY-----"))) {
+    const keyFromDotenvFile = readPrivateKeyFromDotenvFile();
+    if (keyFromDotenvFile) {
+      privateKey = keyFromDotenvFile;
+    }
+  }
+
   if (email && privateKey) {
     const normalizedPrivateKey = normalizePrivateKey(privateKey);
     assertPrivateKeyFormat(normalizedPrivateKey);
