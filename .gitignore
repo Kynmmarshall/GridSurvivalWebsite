@@ -1,3 +1,5 @@
 node_modules/
 .env
 .runtime/
+ga4-service-account.json
+*service-account*.json
