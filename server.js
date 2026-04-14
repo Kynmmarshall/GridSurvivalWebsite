@@ -11,6 +11,16 @@ const port = process.env.PORT || 3000;
 const downloadsStartDate = process.env.GA4_DOWNLOADS_START_DATE || "2024-01-01";
 const analyticsCacheFile = process.env.ANALYTICS_CACHE_FILE || path.join(__dirname, ".runtime", "analytics-cache.json");
 
+process.on("unhandledRejection", (reason) => {
+  // eslint-disable-next-line no-console
+  console.error("Unhandled promise rejection", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  // eslint-disable-next-line no-console
+  console.error("Uncaught exception", error);
+});
+
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -40,6 +50,11 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(path.join(__dirname)));
+
+function createRequestId() {
+  const random = Math.random().toString(36).slice(2, 8);
+  return `${Date.now().toString(36)}-${random}`;
+}
 
 function readAnalyticsCache() {
   try {
@@ -181,17 +196,28 @@ async function runGA4RealtimeReport(propertyId, body, auth) {
   return result.data;
 }
 
-app.get("/api/analytics", async (_req, res) => {
+app.get("/api/analytics", async (req, res) => {
+  const requestId = createRequestId();
   try {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[analytics:${requestId}] request host=${req.get("host") || "unknown"} ip=${req.ip || "unknown"}`
+    );
+
+    res.set("X-Request-Id", requestId);
     res.set("Cache-Control", "no-store");
 
     const propertyId = process.env.GA4_PROPERTY_ID;
     if (!propertyId) {
+      // eslint-disable-next-line no-console
+      console.error(`[analytics:${requestId}] missing GA4_PROPERTY_ID`);
       return res.status(500).json({ error: "Missing GA4_PROPERTY_ID" });
     }
 
     const serviceAccount = parseServiceAccountFromEnv();
     if (!serviceAccount) {
+      // eslint-disable-next-line no-console
+      console.error(`[analytics:${requestId}] missing GA4 service account credentials`);
       return res.status(500).json({
         error: "Missing GA4 service account credentials",
       });
@@ -351,18 +377,32 @@ app.get("/api/analytics", async (_req, res) => {
     writeAnalyticsCache(payload);
     return res.json(payload);
   } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[analytics:${requestId}] request failed`, {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+      status: error?.status,
+      responseStatus: error?.response?.status,
+      responseData: error?.response?.data,
+    });
+
     const cached = readAnalyticsCache();
     if (cached) {
+      // eslint-disable-next-line no-console
+      console.warn(`[analytics:${requestId}] serving cached payload`);
       return res.json({
         ...cached,
         stale: true,
         staleReason: "Serving cached analytics while GA4 is unavailable",
+        requestId,
       });
     }
 
     return res.status(500).json({
       error: "Unable to load GA4 analytics",
       details: error.message,
+      requestId,
     });
   }
 });
