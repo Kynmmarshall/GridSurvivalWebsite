@@ -513,9 +513,9 @@ main {
 /* 3x2 gallery grid with larger slots */
 .gallery-grid-3x2 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(2, 1fr);
-  gap: 2rem;
+  gap: clamp(0.9rem, 2.5vw, 2rem);
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -524,20 +524,33 @@ main {
   position: relative;
   border: 1px dashed rgba(255, 255, 255, 0.3);
   border-radius: 1.2rem;
-  min-height: 200px;
+  min-height: 0;
   min-width: 0;
-  aspect-ratio: 16/9;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   display: grid;
   place-items: center;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.03);
   background-image: var(--slot-image, none);
   background-size: cover;
-  background-position: center;
+  background-repeat: no-repeat;
+  background-position: center center;
   overflow: hidden;
   isolation: isolate;
   transition: border-color 0.2s, color 0.2s, transform 0.2s;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+@media (max-width: 960px) {
+  .gallery-grid-3x2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  .gallery-slot {
+    aspect-ratio: 4 / 3;
+  }
 }
 
 .gallery-slot::after {
@@ -756,5 +769,16 @@ main {
 
   body {
     padding: 1.5rem;
+  }
+
+  .gallery-grid-3x2 {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .gallery-slot {
+    aspect-ratio: 4 / 3;
+    background-size: contain;
+    background-position: center;
   }
 }
