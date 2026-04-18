@@ -10,6 +10,20 @@ const app = express();
 const port = process.env.PORT || 3000;
 const downloadsStartDate = process.env.GA4_DOWNLOADS_START_DATE || "2024-01-01";
 const analyticsCacheFile = process.env.ANALYTICS_CACHE_FILE || path.join(__dirname, ".runtime", "analytics-cache.json");
+const leaderboardApiBaseUrl = process.env.LEADERBOARD_API_BASE_URL || "http://127.0.0.1:8001";
+const leaderboardCountLimit = Number.parseInt(process.env.LEADERBOARD_COUNT_LIMIT || "10000", 10);
+const resolvedLeaderboardCountLimit = Number.isFinite(leaderboardCountLimit)
+  ? Math.min(Math.max(leaderboardCountLimit, 100), 200000)
+  : 10000;
+const playerCountCacheMs = Number.parseInt(process.env.PLAYER_COUNT_CACHE_MS || "60000", 10);
+const resolvedPlayerCountCacheMs = Number.isFinite(playerCountCacheMs)
+  ? Math.max(playerCountCacheMs, 10000)
+  : 60000;
+
+let playerCountCache = {
+  expiresAt: 0,
+  payload: null,
+};
 
 process.on("unhandledRejection", (reason) => {
   // eslint-disable-next-line no-console
@@ -256,6 +270,247 @@ async function runGA4RealtimeReport(propertyId, body, auth) {
   });
   return result.data;
 }
+
+function sanitizeLeaderboardLimit(rawLimit, defaultLimit = 20, maxLimit = 5000) {
+  const parsedLimit = Number.parseInt(String(rawLimit || defaultLimit), 10);
+  if (!Number.isFinite(parsedLimit)) {
+    return defaultLimit;
+  }
+  return Math.min(Math.max(parsedLimit, 1), maxLimit);
+}
+
+function extractLeaderboardCount(payload, leaderboard) {
+  const candidates = [
+    payload?.total_players,
+    payload?.totalPlayers,
+    payload?.total_accounts,
+    payload?.totalAccounts,
+    payload?.player_count,
+    payload?.players_count,
+    payload?.count,
+  ];
+
+  for (const candidate of candidates) {
+    const value = Number(candidate);
+    if (Number.isFinite(value) && value >= 0) {
+      return Math.round(value);
+    }
+  }
+
+  return Array.isArray(leaderboard) ? leaderboard.length : 0;
+}
+
+function countUniquePlayers(rows) {
+  const usernames = new Set();
+
+  (rows || []).forEach((player) => {
+    const username = String(
+      player?.username || player?.user || player?.player || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (username) {
+      usernames.add(username);
+    }
+  });
+
+  return usernames.size;
+}
+
+async function fetchLeaderboardPayloadFromUpstream(mode, limit, requestId) {
+  const upstreamBase = String(leaderboardApiBaseUrl || "").replace(/\/+$/, "");
+  const upstreamUrl = `${upstreamBase}/leaderboard?limit=${limit}&mode=${encodeURIComponent(mode)}`;
+
+  if (typeof fetch !== "function") {
+    throw new Error("Global fetch is unavailable in this Node.js runtime");
+  }
+
+  const upstreamResponse = await fetch(upstreamUrl, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  const rawBody = await upstreamResponse.text();
+  if (!upstreamResponse.ok) {
+    const upstreamError = new Error("Leaderboard upstream unavailable");
+    upstreamError.upstreamStatus = upstreamResponse.status;
+    upstreamError.upstreamBody = rawBody.slice(0, 240);
+    upstreamError.mode = mode;
+    upstreamError.requestId = requestId;
+    throw upstreamError;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (_parseError) {
+    const parseError = new Error("Invalid leaderboard response from upstream");
+    parseError.upstreamBody = rawBody.slice(0, 240);
+    parseError.mode = mode;
+    parseError.requestId = requestId;
+    throw parseError;
+  }
+
+  return {
+    payload,
+    leaderboard: Array.isArray(payload?.leaderboard) ? payload.leaderboard : [],
+    upstreamUrl,
+  };
+}
+
+app.get("/api/leaderboard", async (req, res) => {
+  const requestId = createRequestId();
+  const allowedModes = new Set(["ranked", "unranked"]);
+
+  const modeCandidate = String(req.query.mode || "ranked").toLowerCase();
+  const mode = allowedModes.has(modeCandidate) ? modeCandidate : "ranked";
+  const limit = sanitizeLeaderboardLimit(req.query.limit, 20, 5000);
+
+  try {
+    res.set("X-Request-Id", requestId);
+    res.set("Cache-Control", "no-store");
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[leaderboard:${requestId}] request mode=${mode} limit=${limit} host=${req.get("host") || "unknown"}`
+    );
+
+    const upstream = await fetchLeaderboardPayloadFromUpstream(mode, limit, requestId);
+    const totalPlayers = extractLeaderboardCount(upstream.payload, upstream.leaderboard);
+
+    return res.json({
+      leaderboard: upstream.leaderboard,
+      mode,
+      limit,
+      totalPlayers,
+      refreshedAt: new Date().toISOString(),
+      requestId,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[leaderboard:${requestId}] request failed`, {
+      message: error?.message,
+      stack: error?.stack,
+      mode,
+      upstreamStatus: error?.upstreamStatus,
+      upstreamBody: error?.upstreamBody,
+    });
+
+    if (error?.upstreamStatus) {
+      return res.status(502).json({
+        error: "Leaderboard upstream unavailable",
+        upstreamStatus: error.upstreamStatus,
+        requestId,
+      });
+    }
+
+    if (error?.message === "Invalid leaderboard response from upstream") {
+      return res.status(502).json({
+        error: "Invalid leaderboard response from upstream",
+        requestId,
+      });
+    }
+
+    return res.status(500).json({
+      error: "Unable to load leaderboard",
+      details: error?.message || "Unknown error",
+      requestId,
+    });
+  }
+});
+
+app.get("/api/player-count", async (req, res) => {
+  const requestId = createRequestId();
+  const now = Date.now();
+  const shouldForceRefresh = String(req.query.refresh || "").toLowerCase() === "true";
+
+  if (!shouldForceRefresh && playerCountCache.payload && playerCountCache.expiresAt > now) {
+    return res.json({
+      ...playerCountCache.payload,
+      cached: true,
+      requestId,
+    });
+  }
+
+  try {
+    res.set("X-Request-Id", requestId);
+    res.set("Cache-Control", "no-store");
+
+    const limit = sanitizeLeaderboardLimit(
+      req.query.limit,
+      resolvedLeaderboardCountLimit,
+      200000
+    );
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[player-count:${requestId}] request limit=${limit} host=${req.get("host") || "unknown"}`
+    );
+
+    const [rankedData, unrankedData] = await Promise.all([
+      fetchLeaderboardPayloadFromUpstream("ranked", limit, requestId),
+      fetchLeaderboardPayloadFromUpstream("unranked", limit, requestId),
+    ]);
+
+    const rankedRows = rankedData.leaderboard;
+    const unrankedRows = unrankedData.leaderboard;
+
+    const inferredUniquePlayers = countUniquePlayers([...rankedRows, ...unrankedRows]);
+    const rankedCount = extractLeaderboardCount(rankedData.payload, rankedRows);
+    const unrankedCount = extractLeaderboardCount(unrankedData.payload, unrankedRows);
+    const totalPlayers = Math.max(
+      inferredUniquePlayers,
+      rankedCount,
+      unrankedCount
+    );
+
+    const payload = {
+      totalPlayers,
+      inferredUniquePlayers,
+      rankedCount,
+      unrankedCount,
+      limitUsed: limit,
+      refreshedAt: new Date().toISOString(),
+    };
+
+    playerCountCache = {
+      payload,
+      expiresAt: Date.now() + resolvedPlayerCountCacheMs,
+    };
+
+    return res.json({
+      ...payload,
+      cached: false,
+      requestId,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[player-count:${requestId}] request failed`, {
+      message: error?.message,
+      stack: error?.stack,
+      upstreamStatus: error?.upstreamStatus,
+      upstreamBody: error?.upstreamBody,
+    });
+
+    if (error?.upstreamStatus) {
+      return res.status(502).json({
+        error: "Leaderboard upstream unavailable",
+        upstreamStatus: error.upstreamStatus,
+        requestId,
+      });
+    }
+
+    return res.status(500).json({
+      error: "Unable to load player count",
+      details: error?.message || "Unknown error",
+      requestId,
+    });
+  }
+});
 
 app.get("/api/analytics", async (req, res) => {
   const requestId = createRequestId();

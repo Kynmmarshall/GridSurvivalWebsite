@@ -89,6 +89,7 @@ function formatPercent(ratio) {
 
 let downloadsChart;
 const ANALYTICS_REFRESH_MS = 30000;
+const PLAYER_COUNT_REFRESH_MS = 30000;
 
 function buildAnalyticsEndpointCandidates() {
   const configured = (document.body?.dataset?.analyticsEndpoint || "").trim();
@@ -102,9 +103,47 @@ function buildAnalyticsEndpointCandidates() {
   return [...new Set(candidates.filter(Boolean))];
 }
 
+function buildPlayerCountEndpointCandidates() {
+  const candidates = ["/api/player-count", `${window.location.origin}/api/player-count`];
+
+  if (window.location.hostname && window.location.port !== "6060") {
+    const scheme = window.location.protocol === "http:" ? "http:" : "https:";
+    candidates.push(`${scheme}//${window.location.hostname}:6060/api/player-count`);
+  }
+
+  return [...new Set(candidates.filter(Boolean))];
+}
+
 async function fetchAnalyticsPayload() {
   const endpoints = buildAnalyticsEndpointCandidates();
   let lastError = new Error("No analytics endpoint configured");
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} from ${endpoint}`);
+      }
+
+      const data = await response.json();
+      return { data, endpoint };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function fetchPlayerCountPayload() {
+  const endpoints = buildPlayerCountEndpointCandidates();
+  let lastError = new Error("No player count endpoint configured");
 
   for (const endpoint of endpoints) {
     try {
@@ -198,7 +237,7 @@ function createDownloadsChart() {
 
 async function loadLiveAnalytics() {
   const status = document.getElementById("analyticsStatus");
-  const totalPlayersEl = document.getElementById("totalPlayers");
+  const totalVisitorsEl = document.getElementById("totalVisitors");
   const avgSessionEl = document.getElementById("avgSession");
   const downloadCountEl = document.getElementById("downloadCount");
   const retentionEl = document.getElementById("retentionRate");
@@ -208,8 +247,8 @@ async function loadLiveAnalytics() {
     const liveUsers = Math.max(data.activeUsers || 0, data.realtimeActiveUsers || 0);
     const liveDownloads = Math.max(data.totalDownloads || 0, data.realtimeDownloads || 0);
 
-    if (totalPlayersEl) {
-      animateIntegerValue(totalPlayersEl, liveUsers);
+    if (totalVisitorsEl) {
+      animateIntegerValue(totalVisitorsEl, liveUsers);
     }
     if (downloadCountEl) {
       animateIntegerValue(downloadCountEl, liveDownloads);
@@ -233,8 +272,8 @@ async function loadLiveAnalytics() {
         : "Live data from GA4";
     }
   } catch (error) {
-    if (totalPlayersEl) {
-      totalPlayersEl.textContent = "--";
+    if (totalVisitorsEl) {
+      totalVisitorsEl.textContent = "--";
     }
     if (avgSessionEl) {
       avgSessionEl.textContent = "--";
@@ -257,11 +296,28 @@ async function loadLiveAnalytics() {
   }
 }
 
+async function loadTotalPlayersFromLeaderboard() {
+  const totalPlayersCountEl = document.getElementById("totalPlayersCount");
+  if (!totalPlayersCountEl) {
+    return;
+  }
+
+  try {
+    const { data } = await fetchPlayerCountPayload();
+    const totalPlayersCount = Number(data?.totalPlayers || 0);
+    animateIntegerValue(totalPlayersCountEl, totalPlayersCount);
+  } catch (_error) {
+    totalPlayersCountEl.textContent = "--";
+  }
+}
+
 initGA4();
 trackCTAEvents();
 createDownloadsChart();
 loadLiveAnalytics();
+loadTotalPlayersFromLeaderboard();
 setInterval(loadLiveAnalytics, ANALYTICS_REFRESH_MS);
+setInterval(loadTotalPlayersFromLeaderboard, PLAYER_COUNT_REFRESH_MS);
 
 // Initialize footer year stamp
 const yearTarget = document.getElementById("year");

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grid Survival Leaderboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Audiowide&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="leaderboard.css" />
+  </head>
+  <body data-leaderboard-endpoint="/api/leaderboard" data-default-mode="ranked">
+    <div class="bg-layer bg-grid" aria-hidden="true"></div>
+    <div class="bg-layer bg-glow" aria-hidden="true"></div>
+
+    <header class="board-header">
+      <a class="brand" href="index.html">
+        <img src="assets/logo.png" alt="Grid Survival logo" />
+        <div>
+          <p class="eyebrow">Competitive Hub</p>
+          <h1>Grid Survival Leaderboard</h1>
+        </div>
+      </a>
+      <nav>
+        <a href="index.html">Back to Home</a>
+        <a href="#boardPanel">Leaderboard</a>
+      </nav>
+    </header>
+
+    <main id="boardPanel" class="board-shell">
+      <section class="board-panel control-panel">
+        <div class="mode-toggle" role="tablist" aria-label="Leaderboard mode switch">
+          <button class="mode-btn is-active" type="button" data-mode="ranked" role="tab" aria-selected="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l2.8 5.7 6.2.9-4.5 4.3 1 6.1L12 16.2 6.5 19l1-6.1L3 8.6l6.2-.9z" />
+            </svg>
+            Ranked
+          </button>
+          <button class="mode-btn" type="button" data-mode="unranked" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l8 4.4v9.2L12 21l-8-4.4V7.4zM7 9.2l5 2.7 5-2.7" />
+            </svg>
+            Unranked
+          </button>
+        </div>
+
+        <label class="search-wrap" for="playerSearch">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11 4a7 7 0 015.5 11.3l4.1 4.2-1.4 1.4-4.2-4.1A7 7 0 1111 4zm0 2a5 5 0 100 10 5 5 0 000-10z" />
+          </svg>
+          <input
+            id="playerSearch"
+            type="search"
+            placeholder="Search player by username"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+
+        <button id="refreshButton" class="refresh-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 11-2.4-5.7V3h2v6h-6V7h3.1A6 6 0 1018 12z" />
+          </svg>
+          Refresh
+        </button>
+
+        <p id="boardStatus" class="board-status" aria-live="polite">Loading leaderboard data...</p>
+      </section>
+
+      <section class="summary-grid" aria-label="Leaderboard summary">
+        <article class="board-panel summary-card">
+          <div class="summary-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z" />
+            </svg>
+          </div>
+          <p>Total Players</p>
+          <strong id="summaryPlayers">0</strong>
+        </article>
+
+        <article class="board-panel summary-card">
+          <div class="summary-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20h16v2H4zm2-3h3V9H6zm5 0h3V5h-3zm5 0h3v-7h-3z" />
+            </svg>
+          </div>
+          <p>Average Rating</p>
+          <strong id="summaryAverageRating">0</strong>
+        </article>
+
+        <article class="board-panel summary-card">
+          <div class="summary-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l3 6 6 .8-4.4 4.3 1 6.1L12 16.3 6.4 19.2l1-6.1L3 8.8 9 8z" />
+            </svg>
+          </div>
+          <p>Top Damage</p>
+          <strong id="summaryTopDamage">0</strong>
+        </article>
+
+        <article class="board-panel summary-card">
+          <div class="summary-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l8 4v6c0 5.5-3.8 8.9-8 10-4.2-1.1-8-4.5-8-10V7z" />
+            </svg>
+          </div>
+          <p>Best Win Rate</p>
+          <strong id="summaryBestWinRate">0%</strong>
+        </article>
+      </section>
+
+      <section class="board-grid">
+        <article class="board-panel list-panel">
+          <div class="panel-header">
+            <h2>Player Standings</h2>
+            <span id="listCount">0 shown</span>
+          </div>
+          <div id="leaderboardRows" class="leaderboard-rows" aria-label="Leaderboard player list"></div>
+        </article>
+
+        <aside class="board-panel detail-panel" aria-label="Selected player details">
+          <div class="panel-header detail-head">
+            <h2>Player Intel</h2>
+            <span id="detailModeBadge">Ranked</span>
+          </div>
+
+          <div class="player-identity">
+            <p class="eyebrow">Selected Player</p>
+            <h3 id="detailUsername">Select a player</h3>
+            <p id="detailPosition">Waiting for data...</p>
+          </div>
+
+          <dl class="detail-grid">
+            <div>
+              <dt>Rating</dt>
+              <dd id="detailRating">-</dd>
+            </div>
+            <div>
+              <dt>Rank Rating</dt>
+              <dd id="detailRr">-</dd>
+            </div>
+            <div>
+              <dt>Matches</dt>
+              <dd id="detailMatches">-</dd>
+            </div>
+            <div>
+              <dt>Win Rate</dt>
+              <dd id="detailWinRate">-</dd>
+            </div>
+            <div>
+              <dt>Rounds</dt>
+              <dd id="detailRounds">-</dd>
+            </div>
+            <div>
+              <dt>Round Win Rate</dt>
+              <dd id="detailRoundWinRate">-</dd>
+            </div>
+            <div>
+              <dt>Eliminations</dt>
+              <dd id="detailEliminations">-</dd>
+            </div>
+            <div>
+              <dt>Deaths</dt>
+              <dd id="detailDeaths">-</dd>
+            </div>
+          </dl>
+
+          <div class="detail-highlight-grid">
+            <article>
+              <p>Damage Dealt</p>
+              <strong id="detailDamageDealt">0</strong>
+            </article>
+            <article>
+              <p>Damage Taken</p>
+              <strong id="detailDamageTaken">0</strong>
+            </article>
+            <article>
+              <p>Damage Delta</p>
+              <strong id="detailDamageDelta">0</strong>
+            </article>
+            <article>
+              <p>K/D Ratio</p>
+              <strong id="detailKd">0.00</strong>
+            </article>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="leaderboard.js"></script>
+  </body>
+</html>
