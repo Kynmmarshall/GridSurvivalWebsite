@@ -260,9 +260,9 @@ async function loadLiveAnalytics() {
       retentionEl.textContent = formatPercent(data.engagementRate || 0);
     }
 
-    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(data.dailyDownloads)) {
+    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(liveUsers)) {
       downloadsChart.data.labels = data.dailyLabels;
-      downloadsChart.data.datasets[0].data = data.dailyDownloads;
+      downloadsChart.data.datasets[0].data = liveUsers;
       downloadsChart.update();
     }
 
