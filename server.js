@@ -544,7 +544,7 @@ app.get("/api/analytics", async (req, res) => {
       scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
     });
 
-    const [overview, downloadsByDay, downloadsTotal] = await Promise.all([
+    const [overview, visitorsByDay, downloadsTotal] = await Promise.all([
       runGA4Report(
         propertyId,
         {
@@ -562,16 +562,7 @@ app.get("/api/analytics", async (req, res) => {
         {
           dateRanges: [{ startDate: "6daysAgo", endDate: "today" }],
           dimensions: [{ name: "date" }],
-          metrics: [{ name: "eventCount" }],
-          dimensionFilter: {
-            filter: {
-              fieldName: "eventName",
-              stringFilter: {
-                value: "download_click",
-                matchType: "EXACT",
-              },
-            },
-          },
+          metrics: [{ name: "activeUsers" }],
           orderBys: [{ dimension: { dimensionName: "date" } }],
         },
         auth
@@ -644,9 +635,9 @@ app.get("/api/analytics", async (req, res) => {
     const engagementRate = Number(overviewRow[2]?.value || 0);
 
     const dailyLabels = [];
-    const dailyDownloads = [];
+    const dailyVisitors = [];
 
-    (downloadsByDay.rows || []).forEach((row) => {
+    (visitorsByDay.rows || []).forEach((row) => {
       const yyyymmdd = row.dimensionValues?.[0]?.value || "";
       const dayCount = Number(row.metricValues?.[0]?.value || 0);
 
@@ -662,7 +653,7 @@ app.get("/api/analytics", async (req, res) => {
         dailyLabels.push(yyyymmdd);
       }
 
-      dailyDownloads.push(dayCount);
+      dailyVisitors.push(dayCount);
     });
 
     const totalDownloads = Number(
@@ -672,9 +663,9 @@ app.get("/api/analytics", async (req, res) => {
     const resolvedActiveUsers = Math.max(activeUsers, realtimeActiveUsers);
     const resolvedTotalDownloads = Math.max(totalDownloads, realtimeDownloads);
 
-    if (dailyLabels.length === 0 && resolvedTotalDownloads > 0) {
+    if (dailyLabels.length === 0 && resolvedActiveUsers > 0) {
       dailyLabels.push("Now");
-      dailyDownloads.push(resolvedTotalDownloads);
+      dailyVisitors.push(resolvedActiveUsers);
     }
 
     const payload = {
@@ -685,7 +676,7 @@ app.get("/api/analytics", async (req, res) => {
       realtimeActiveUsers,
       realtimeDownloads,
       dailyLabels,
-      dailyDownloads,
+      dailyVisitors,
       refreshedAt: new Date().toISOString(),
       stale: false,
     };

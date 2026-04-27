@@ -188,7 +188,7 @@ function createDownloadsChart() {
       labels: [],
       datasets: [
         {
-          label: "Downloads per day",
+          label: "Visitors per day",
           data: [],
           fill: true,
           backgroundColor: gradient,
@@ -260,9 +260,15 @@ async function loadLiveAnalytics() {
       retentionEl.textContent = formatPercent(data.engagementRate || 0);
     }
 
-    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(liveUsers)) {
+    const dailyVisitors = Array.isArray(data.dailyVisitors)
+      ? data.dailyVisitors
+      : Array.isArray(data.dailyDownloads)
+        ? data.dailyDownloads
+        : null;
+
+    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(dailyVisitors)) {
       downloadsChart.data.labels = data.dailyLabels;
-      downloadsChart.data.datasets[0].data = liveUsers;
+      downloadsChart.data.datasets[0].data = dailyVisitors;
       downloadsChart.update();
     }
 
