@@ -87,7 +87,7 @@ function formatPercent(ratio) {
   return `${pct.toFixed(1)}%`;
 }
 
-let downloadsChart;
+let visitorsChart;
 const ANALYTICS_REFRESH_MS = 30000;
 const PLAYER_COUNT_REFRESH_MS = 30000;
 
@@ -168,8 +168,8 @@ async function fetchPlayerCountPayload() {
   throw lastError;
 }
 
-function createDownloadsChart() {
-  const canvas = document.getElementById("downloadsChart");
+function createVisitorsChart() {
+  const canvas = document.getElementById("visitorsChart");
   if (!canvas) {
     return;
   }
@@ -182,7 +182,7 @@ function createDownloadsChart() {
   gradient.addColorStop(0, "rgba(109, 240, 255, 0.4)");
   gradient.addColorStop(1, "rgba(109, 240, 255, 0)");
 
-  downloadsChart = new Chart(canvas, {
+  visitorsChart = new Chart(canvas, {
     type: "line",
     data: {
       labels: [],
@@ -260,16 +260,12 @@ async function loadLiveAnalytics() {
       retentionEl.textContent = formatPercent(data.engagementRate || 0);
     }
 
-    const dailyVisitors = Array.isArray(data.dailyVisitors)
-      ? data.dailyVisitors
-      : Array.isArray(data.dailyDownloads)
-        ? data.dailyDownloads
-        : null;
+    const dailyVisitors = Array.isArray(data.dailyVisitors) ? data.dailyVisitors : null;
 
-    if (downloadsChart && Array.isArray(data.dailyLabels) && Array.isArray(dailyVisitors)) {
-      downloadsChart.data.labels = data.dailyLabels;
-      downloadsChart.data.datasets[0].data = dailyVisitors;
-      downloadsChart.update();
+    if (visitorsChart && Array.isArray(data.dailyLabels) && Array.isArray(dailyVisitors)) {
+      visitorsChart.data.labels = data.dailyLabels;
+      visitorsChart.data.datasets[0].data = dailyVisitors;
+      visitorsChart.update();
     }
 
     if (status) {
@@ -290,10 +286,10 @@ async function loadLiveAnalytics() {
     if (retentionEl) {
       retentionEl.textContent = "--";
     }
-    if (downloadsChart) {
-      downloadsChart.data.labels = [];
-      downloadsChart.data.datasets[0].data = [];
-      downloadsChart.update();
+    if (visitorsChart) {
+      visitorsChart.data.labels = [];
+      visitorsChart.data.datasets[0].data = [];
+      visitorsChart.update();
     }
     if (status) {
       const reason = String(error?.message || "unknown error").slice(0, 120);
@@ -319,7 +315,7 @@ async function loadTotalPlayersFromLeaderboard() {
 
 initGA4();
 trackCTAEvents();
-createDownloadsChart();
+createVisitorsChart();
 loadLiveAnalytics();
 loadTotalPlayersFromLeaderboard();
 setInterval(loadLiveAnalytics, ANALYTICS_REFRESH_MS);

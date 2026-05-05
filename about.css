@@ -1,0 +1,238 @@
+:root {
+  --bg: #01040c;
+  --accent: #6df0ff;
+  --accent-hot: #ff6b9f;
+  --text: #e5f0ff;
+  --muted: #7c8aa4;
+  --card: rgba(9, 15, 35, 0.86);
+  --border: rgba(255, 255, 255, 0.08);
+  font-size: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 10% 20%, #061740, #01040c 50%),
+    radial-gradient(circle at 90% 10%, #2b0f36, transparent 40%),
+    #01040c;
+  overflow-x: hidden;
+  position: relative;
+  padding: 2rem clamp(1.2rem, 4vw, 3.6rem);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Audiowide", "Space Grotesk", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+p {
+  line-height: 1.5;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.orb {
+  position: fixed;
+  width: clamp(10rem, 25vw, 20rem);
+  height: clamp(10rem, 25vw, 20rem);
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.4;
+  z-index: -1;
+  animation: drift 18s linear infinite;
+}
+
+.orb-left {
+  background: #2d8bff;
+  top: 10%;
+  left: -5%;
+}
+
+.orb-right {
+  background: #ff4fd8;
+  bottom: 5%;
+  right: -5%;
+  animation-delay: 4s;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(10%, -10%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand img {
+  width: 56px;
+  height: 56px;
+}
+
+.brand h1 {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+nav {
+  display: flex;
+  gap: 0.8rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: color 0.2s, border 0.2s, transform 0.2s;
+}
+
+nav a[aria-current="page"],
+nav a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.school-logo-static {
+  margin-left: auto;
+  width: clamp(64px, 7vw, 98px);
+  padding: clamp(0.3rem, 0.8vw, 0.55rem);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(7, 14, 34, 0.72);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+main {
+  display: grid;
+  gap: 1.6rem;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1.3rem;
+  padding: clamp(1.2rem, 2.5vw, 2rem);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+.intro h2 {
+  margin: 0.5rem 0 0.7rem;
+}
+
+.panel-heading h3 {
+  margin: 0.35rem 0 0.6rem;
+}
+
+.panel-heading p {
+  color: var(--muted);
+}
+
+.team-grid {
+  margin-top: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.profile-card {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(3, 8, 20, 0.84);
+}
+
+.profile-card img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 0.8rem;
+}
+
+.profile-card h4 {
+  font-size: 1rem;
+}
+
+.role {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0.3rem 0 0.6rem;
+}
+
+.file-hint {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.supervisor strong {
+  color: var(--accent);
+}
+
+.site-footer {
+  margin-top: 1.8rem;
+  text-align: center;
+}
+
+.site-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .school-logo-static {
+    margin-left: 0;
+    width: 64px;
+    padding: 0.3rem;
+  }
+}

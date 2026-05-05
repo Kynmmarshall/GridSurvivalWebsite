@@ -83,6 +83,22 @@ img {
   animation-delay: 4s;
 }
 
+.school-logo-static {
+  margin-left: auto;
+  width: clamp(64px, 7vw, 98px);
+  padding: clamp(0.3rem, 0.8vw, 0.55rem);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(7, 14, 34, 0.72);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+.school-logo-static img {
+  width: 100%;
+  height: auto;
+}
+
 @keyframes drift {
   0% {
     transform: translate(0, 0);
@@ -761,6 +777,12 @@ main {
   nav {
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .school-logo-static {
+    margin-left: 0;
+    width: 64px;
+    padding: 0.3rem;
   }
 
   .cta-row {
